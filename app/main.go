@@ -5,11 +5,25 @@ import (
 	"bufio"
 	"log"
 	"encoding/json"
+	"flag"
+	"net"
 )
 
+var address = flag.String("address", "", "where to send messages")
+
 func main() {
-	enc := json.NewEncoder(os.Stdout)
+	flag.Parse()
+	conn, err := net.Dial("tcp", *address)
+
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		log.Println("connection established")
+	}
+
+	enc := json.NewEncoder(conn)
 	stdin := bufio.NewScanner(os.Stdin)
+
 	for stdin.Scan() {
 		log.Println("accepting input")
 		message := Message{stdin.Text()}
