@@ -1,12 +1,12 @@
 package main
 
 import (
-	"os"
 	"bufio"
-	"log"
 	"encoding/json"
 	"flag"
+	"log"
 	"net"
+	"os"
 )
 
 var address = flag.String("address", "", "where to send messages")
@@ -29,7 +29,7 @@ func main() {
 		message := Message{stdin.Text()}
 		err := enc.Encode(message)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		} else {
 			log.Println("OK!")
 		}
