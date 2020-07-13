@@ -26,11 +26,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	
 	self = lisn.Addr().String()
-	
 	log.Println("Listening on", self)
-	
+
 	flag.Parse()
 	go dial(*address)
 
@@ -44,7 +42,6 @@ func main() {
 }
 
 func dial(addr string) {
-	fmt.Println(addr)
 	conn, err := net.Dial("tcp", addr)
 
 	if err != nil {
