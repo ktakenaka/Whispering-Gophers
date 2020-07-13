@@ -121,8 +121,6 @@ func dial(addr string) {
 		err := enc.Encode(<-ch)
 		if err != nil {
 			log.Fatal(err)
-		} else {
-			log.Println("OK!")
 		}
 	}
 }
@@ -137,6 +135,7 @@ func server(c net.Conn) {
 			log.Println(err)
 			return
 		}
+		go dial(message.Addr)
 		fmt.Printf("%#v\n", message)
 	}
 }
