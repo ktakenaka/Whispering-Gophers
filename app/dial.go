@@ -1,12 +1,12 @@
 package main
 
 import (
-	"os"
 	"bufio"
-	"log"
 	"encoding/json"
 	"flag"
+	"log"
 	"net"
+	"os"
 )
 
 var address = flag.String("address", "", "where to send messages")

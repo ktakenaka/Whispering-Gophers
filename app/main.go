@@ -3,17 +3,18 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"flag"
+	"fmt"
 	"log"
 	"net"
 	"os"
-	"fmt"
-	"flag"
-	"github.com/campoy/whispering-gophers/util"
 	"sync"
+
+	"github.com/campoy/whispering-gophers/util"
 )
 
 var (
-	self string
+	self    string
 	address = flag.String("address", "", "where to send messages")
 )
 
@@ -44,7 +45,7 @@ func main() {
 }
 
 type Peers struct {
-	m map[string]chan<- Message
+	m  map[string]chan<- Message
 	mu sync.RWMutex
 }
 
@@ -75,7 +76,7 @@ func (p *Peers) Remove(addr string) {
 func (p *Peers) List() []chan<- Message {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	lis := make([]chan<-Message, 0, len(p.m))
+	lis := make([]chan<- Message, 0, len(p.m))
 	for _, ch := range p.m {
 		lis = append(lis, ch)
 	}
@@ -125,4 +126,3 @@ func server(c net.Conn) {
 		fmt.Printf("%#v\n", message)
 	}
 }
-
