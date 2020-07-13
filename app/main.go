@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"flag"
 	"github.com/campoy/whispering-gophers/util"
+	"sync"
 )
 
 var (
@@ -30,7 +31,9 @@ func main() {
 	log.Println("Listening on", self)
 
 	flag.Parse()
-	go dial(*address)
+	ch := make(chan Message)
+	go receive(ch)
+	go dial(ch, *address)
 
 	for {
 		c, err := lisn.Accept()
@@ -41,7 +44,15 @@ func main() {
 	}
 }
 
-func dial(addr string) {
+func receive(ch chan Message) {
+	stdin := bufio.NewScanner(os.Stdin)
+	for stdin.Scan() {
+		message := Message{Addr: self, Body: stdin.Text()}
+		ch <- message
+	}
+}
+
+func dial(ch chan Message, addr string) {
 	conn, err := net.Dial("tcp", addr)
 
 	if err != nil {
@@ -49,14 +60,12 @@ func dial(addr string) {
 	} else {
 		log.Println("connection established")
 	}
+	defer conn.Close()
 
 	enc := json.NewEncoder(conn)
-	stdin := bufio.NewScanner(os.Stdin)
 
-	for stdin.Scan() {
-		message := Message{Addr: self, Body: stdin.Text()}
-		err := enc.Encode(message)
-
+	for {
+		err := enc.Encode(<-ch)
 		if err != nil {
 			log.Fatal(err)
 		} else {
