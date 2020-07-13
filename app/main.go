@@ -97,8 +97,17 @@ func receive() {
 }
 
 func dial(addr string) {
-	conn, err := net.Dial("tcp", addr)
+	if addr == self {
+		return
+	}
 
+	ch := peers.Add(addr)
+	if ch == nil {
+		return
+	}
+	defer peers.Remove(addr)
+
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		log.Fatal(err)
 	} else {
@@ -106,17 +115,14 @@ func dial(addr string) {
 	}
 	defer conn.Close()
 
-	ch := peers.Add(addr)
-	if ch != nil {
-		enc := json.NewEncoder(conn)
+	enc := json.NewEncoder(conn)
 
-		for {
-			err := enc.Encode(<-ch)
-			if err != nil {
-				log.Fatal(err)
-			} else {
-				log.Println("OK!")
-			}
+	for {
+		err := enc.Encode(<-ch)
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			log.Println("OK!")
 		}
 	}
 }
