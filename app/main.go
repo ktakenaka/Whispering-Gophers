@@ -31,9 +31,8 @@ func main() {
 	log.Println("Listening on", self)
 
 	flag.Parse()
-	ch := make(chan Message)
-	go receive(ch)
-	go dial(ch, *address)
+	go receive()
+	go dial(*address)
 
 	for {
 		c, err := lisn.Accept()
@@ -44,7 +43,9 @@ func main() {
 	}
 }
 
-func receive(ch chan Message) {
+var ch = make(chan Message)
+
+func receive() {
 	stdin := bufio.NewScanner(os.Stdin)
 	for stdin.Scan() {
 		message := Message{Addr: self, Body: stdin.Text()}
@@ -52,7 +53,7 @@ func receive(ch chan Message) {
 	}
 }
 
-func dial(ch chan Message, addr string) {
+func dial(addr string) {
 	conn, err := net.Dial("tcp", addr)
 
 	if err != nil {
