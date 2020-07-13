@@ -49,8 +49,7 @@ type Peers struct {
 	mu sync.RWMutex
 }
 
-// TODO: remove with starting using Peers
-var ch = make(chan Message)
+var peers = Peers{m: make(map[string]chan<- Message)}
 
 func (p *Peers) Add(addr string) <-chan Message {
 	p.mu.Lock()
@@ -87,7 +86,13 @@ func receive() {
 	stdin := bufio.NewScanner(os.Stdin)
 	for stdin.Scan() {
 		message := Message{Addr: self, Body: stdin.Text()}
-		ch <- message
+		for _, ch := range peers.List() {
+			select {
+			case ch <- message:
+			default:
+				log.Println("Send failed")
+			}
+		}
 	}
 }
 
@@ -101,14 +106,17 @@ func dial(addr string) {
 	}
 	defer conn.Close()
 
-	enc := json.NewEncoder(conn)
+	ch := peers.Add(addr)
+	if ch != nil {
+		enc := json.NewEncoder(conn)
 
-	for {
-		err := enc.Encode(<-ch)
-		if err != nil {
-			log.Fatal(err)
-		} else {
-			log.Println("OK!")
+		for {
+			err := enc.Encode(<-ch)
+			if err != nil {
+				log.Fatal(err)
+			} else {
+				log.Println("OK!")
+			}
 		}
 	}
 }
