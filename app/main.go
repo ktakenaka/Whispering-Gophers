@@ -43,7 +43,45 @@ func main() {
 	}
 }
 
+type Peers struct {
+	m map[string]chan<- Message
+	mu sync.RWMutex
+}
+
+// TODO: remove with starting using Peers
 var ch = make(chan Message)
+
+func (p *Peers) Add(addr string) <-chan Message {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if _, ok := p.m[addr]; ok {
+		return nil
+	}
+
+	ch := make(chan Message)
+	p.m[addr] = ch
+	log.Println("channel is added for ", addr)
+	return ch
+}
+
+func (p *Peers) Remove(addr string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if ch, ok := p.m[addr]; ok {
+		close(ch)
+	}
+	delete(p.m, addr)
+}
+
+func (p *Peers) List() []chan<- Message {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	lis := make([]chan<-Message, len(p.m))
+	for _, ch := range p.m {
+		lis = append(lis, ch)
+	}
+	return lis
+}
 
 func receive() {
 	stdin := bufio.NewScanner(os.Stdin)
