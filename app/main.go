@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"flag"
 	"github.com/campoy/whispering-gophers/util"
+	"sync"
 )
 
 var (
@@ -26,12 +27,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	
 	self = lisn.Addr().String()
-	
 	log.Println("Listening on", self)
-	
+
 	flag.Parse()
+	go receive()
 	go dial(*address)
 
 	for {
@@ -43,8 +43,54 @@ func main() {
 	}
 }
 
+type Peers struct {
+	m map[string]chan<- Message
+	mu sync.RWMutex
+}
+
+// TODO: remove with starting using Peers
+var ch = make(chan Message)
+
+func (p *Peers) Add(addr string) <-chan Message {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if _, ok := p.m[addr]; ok {
+		return nil
+	}
+
+	ch := make(chan Message)
+	p.m[addr] = ch
+	return ch
+}
+
+func (p *Peers) Remove(addr string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if ch, ok := p.m[addr]; ok {
+		close(ch)
+	}
+	delete(p.m, addr)
+}
+
+func (p *Peers) List() []chan<- Message {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	lis := make([]chan<-Message, 0, len(p.m))
+	for _, ch := range p.m {
+		lis = append(lis, ch)
+	}
+	return lis
+}
+
+func receive() {
+	stdin := bufio.NewScanner(os.Stdin)
+	for stdin.Scan() {
+		message := Message{Addr: self, Body: stdin.Text()}
+		ch <- message
+	}
+}
+
 func dial(addr string) {
-	fmt.Println(addr)
 	conn, err := net.Dial("tcp", addr)
 
 	if err != nil {
@@ -52,14 +98,12 @@ func dial(addr string) {
 	} else {
 		log.Println("connection established")
 	}
+	defer conn.Close()
 
 	enc := json.NewEncoder(conn)
-	stdin := bufio.NewScanner(os.Stdin)
 
-	for stdin.Scan() {
-		message := Message{Addr: self, Body: stdin.Text()}
-		err := enc.Encode(message)
-
+	for {
+		err := enc.Encode(<-ch)
 		if err != nil {
 			log.Fatal(err)
 		} else {
