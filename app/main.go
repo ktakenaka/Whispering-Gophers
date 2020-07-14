@@ -83,16 +83,14 @@ func (p *Peers) List() []chan<- Message {
 	return lis
 }
 
-type SeenId struct {
-	seen map[string]bool
-	mu sync.Mutex
-}
-
-var seenId = SeenId{seen: make(map[string]bool)}
+var seenId = struct {
+	m map[string]bool
+	sync.Mutext
+}{m: make(map[string]bool)}
 
 func Seen(id string) bool {
-	seenId.mu.Lock()
-	defer seenId.mu.Unlock()
+	seenId.Lock()
+	defer seenId.Unlock()
 	if seenId.seen[id] {
 		return true
 	}
