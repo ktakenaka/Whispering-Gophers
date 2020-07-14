@@ -19,6 +19,7 @@ var (
 )
 
 type Message struct {
+	ID string
 	Addr string
 	Body string
 }
@@ -82,10 +83,28 @@ func (p *Peers) List() []chan<- Message {
 	return lis
 }
 
+type SeenId struct {
+	seen map[string]bool
+	mu sync.Mutex
+}
+
+var seenId = SeenId{seen: make(map[string]bool)}
+
+func Seen(id string) bool {
+	seenId.mu.Lock()
+	defer seenId.mu.Unlock()
+	if seenId.seen[id] {
+		return true
+	}
+	seenId.seen[id] = true
+	return false
+}
+
 func receive() {
 	stdin := bufio.NewScanner(os.Stdin)
 	for stdin.Scan() {
-		message := Message{Addr: self, Body: stdin.Text()}
+		id := util.RandomID()
+		message := Message{ID: id, Addr: self, Body: stdin.Text()}
 		for _, ch := range peers.List() {
 			select {
 			case ch <- message:
@@ -134,6 +153,9 @@ func server(c net.Conn) {
 		if err := dec.Decode(&message); err != nil {
 			log.Println(err)
 			return
+		}
+		if Seen(message.ID) {
+			continue
 		}
 		go dial(message.Addr)
 		fmt.Printf("%#v\n", message)
